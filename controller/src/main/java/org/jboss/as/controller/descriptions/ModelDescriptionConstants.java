@@ -42,6 +42,7 @@ public class ModelDescriptionConstants {
     public static final String ADMIN_ONLY = "admin-only";
     public static final String ADMIN_ONLY_POLICY = "admin-only-policy";
     public static final String ADVANCED_FILTER = "advanced-filter";
+    public static final String ADDRESS_TEMPLATE = "address-template";
     public static final String ALLOWED = "allowed";
     public static final String ALLOW_EMPTY_PASSWORDS = "allow-empty-passwords";
     public static final String ALLOW_RESOURCE_SERVICE_RESTART = "allow-resource-service-restart";
@@ -93,6 +94,7 @@ public class ModelDescriptionConstants {
     public static final String CONFIGURED_REQUIRES_ADDRESSABLE = "configured-requires-addressable";
     public static final String CONFIGURED_REQUIRES_READ = "configured-requires-read";
     public static final String CONFIGURED_REQUIRES_WRITE = "configured-requires-write";
+    public static final String CONJUNCT = "conjunct";
     public static final String CONNECTION = "connection";
     public static final String CONNECTIONS = "connections";
     public static final String CONSOLE_ENABLED = "console-enabled";
@@ -159,6 +161,7 @@ public class ModelDescriptionConstants {
     public static final String FILE = "file";
     public static final String FILE_HANDLER = "file-handler";
     public static final String FILTER = "filter";
+    //public final static String FILTER_CONJUNCT = "conjuinct";
     public static final String FILTERED_ATTRIBUTES = "filtered-attributes";
     public static final String FILTERED_CHILDREN_TYPES = "filtered-children-types";
     public static final String FILTERED_OPERATIONS = "filtered-operations";
@@ -230,6 +233,7 @@ public class ModelDescriptionConstants {
     public static final String MANAGEMENT_OPERATIONS = "management-operations";
     public static final String MANAGEMENT_SUBSYSTEM_ENDPOINT = "management-subsystem-endpoint";
     public static final String MAP_GROUPS_TO_ROLES = "map-groups-to-roles";
+    public static final String MAP_REDUCE = "map-reduce";
     public static final String MASK = "mask";
     public static final String MASTER = "master";
     public static final String MAX = "max";
@@ -391,6 +395,7 @@ public class ModelDescriptionConstants {
     public static final String SOURCE_NETWORK = "source-network";
     public static final String OPERATION_REQUIRES_RELOAD = "operation-requires-reload";
     public static final String OPERATION_REQUIRES_RESTART = "operation-requires-restart";
+    public static final String REDUCE = "reduce";
     public static final String RELOAD_SERVERS = "reload-servers";
     public static final String RESTART_SERVERS = "restart-servers";
     public static final String RESUME_SERVERS = "resume-servers";

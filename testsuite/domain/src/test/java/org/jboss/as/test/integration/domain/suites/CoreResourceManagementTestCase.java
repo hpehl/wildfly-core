@@ -22,52 +22,7 @@
 
 package org.jboss.as.test.integration.domain.suites;
 
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.ADD;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.ANY_ADDRESS;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.AUTO_START;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.BOOT_TIME;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.CHILD_TYPE;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.COMPOSITE;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.CORE_SERVICE;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.DEFAULT_INTERFACE;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.DIRECTORY;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.FAILED;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.FAILURE_DESCRIPTION;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.GROUP;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.HOST;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.INCLUDE_DEFAULTS;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.INTERFACE;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.NAME;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.NAMES;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OPERATION_HEADERS;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OPERATION_REQUIRES_RELOAD;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP_ADDR;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OUTCOME;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.PLATFORM_MBEAN;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.PROCESS_STATE;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.PROFILE;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.READ_ATTRIBUTE_OPERATION;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.READ_CHILDREN_NAMES_OPERATION;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.READ_RESOURCE_OPERATION;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.RELOAD_REQUIRED;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.REMOVE;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.RESPONSE;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.RESPONSE_HEADERS;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.RESULT;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.ROLLBACK_ON_RUNTIME_FAILURE;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SERVER;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SERVER_CONFIG;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SERVER_GROUP;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SERVER_GROUPS;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SOCKET_BINDING_GROUP;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.STEPS;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SUCCESS;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SYSTEM_PROPERTY;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.TYPE;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.UNDEFINE_ATTRIBUTE_OPERATION;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.VALUE;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.WRITE_ATTRIBUTE_OPERATION;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.*;
 import static org.jboss.as.test.integration.domain.management.util.DomainTestSupport.validateFailedResponse;
 import static org.jboss.as.test.integration.domain.management.util.DomainTestSupport.validateResponse;
 
@@ -863,6 +818,22 @@ public class CoreResourceManagementTestCase {
     }
 
 
+    @Test
+    public void testMapOperations() throws Exception {
+
+        final DomainClient masterClient = domainMasterLifecycleUtil.getDomainClient();
+
+        final ModelNode operation = new ModelNode();
+        operation.get(OP).set(MAP_REDUCE);
+        operation.get(ADDRESS).setEmptyList();
+        operation.get(ADDRESS_TEMPLATE).set("/host=master/server=*");
+        operation.get(FILTER).add("foo", "bar");
+        operation.get(REDUCE).add("name");
+
+        ModelNode response = masterClient.execute(operation);
+        System.out.println(response);
+    }
+
     private void testCannotInvokeManagedServerOperationsComposite(ModelNode stepAddress) throws Exception {
         final DomainClient masterClient = domainMasterLifecycleUtil.getDomainClient();
 
@@ -1072,4 +1043,6 @@ public class CoreResourceManagementTestCase {
         op.get("expression").set(new ValueExpression("${" + propName + "}"));
         return op;
     }
+
+
 }
