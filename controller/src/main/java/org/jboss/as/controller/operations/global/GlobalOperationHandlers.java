@@ -104,7 +104,7 @@ public class GlobalOperationHandlers {
         root.registerOperationHandler(ReadChildrenResourcesHandler.DEFINITION, ReadChildrenResourcesHandler.INSTANCE, true);
         root.registerOperationHandler(ReadOperationNamesHandler.DEFINITION, ReadOperationNamesHandler.INSTANCE, true);
         root.registerOperationHandler(ReadOperationDescriptionHandler.DEFINITION, ReadOperationDescriptionHandler.INSTANCE, true);
-        root.registerOperationHandler(MapReduceOperationHandler.DEFINITION, MapReduceOperationHandler.INSTANCE, true);
+        root.registerOperationHandler(QueryOperationHandler.DEFINITION, QueryOperationHandler.INSTANCE, true);
 
         //map operations
         root.registerOperationHandler(MapOperations.MAP_PUT_DEFINITION, MapOperations.MAP_PUT_HANDLER, true);

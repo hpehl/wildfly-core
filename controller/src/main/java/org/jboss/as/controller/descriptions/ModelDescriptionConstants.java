@@ -93,7 +93,6 @@ public class ModelDescriptionConstants {
     public static final String CONFIGURED_REQUIRES_ADDRESSABLE = "configured-requires-addressable";
     public static final String CONFIGURED_REQUIRES_READ = "configured-requires-read";
     public static final String CONFIGURED_REQUIRES_WRITE = "configured-requires-write";
-    public static final String CONJUNCT = "conjunct";
     public static final String CONNECTION = "connection";
     public static final String CONNECTIONS = "connections";
     public static final String CONSOLE_ENABLED = "console-enabled";
@@ -231,7 +230,6 @@ public class ModelDescriptionConstants {
     public static final String MANAGEMENT_OPERATIONS = "management-operations";
     public static final String MANAGEMENT_SUBSYSTEM_ENDPOINT = "management-subsystem-endpoint";
     public static final String MAP_GROUPS_TO_ROLES = "map-groups-to-roles";
-    public static final String MAP_REDUCE = "map-reduce";
     public static final String MASK = "mask";
     public static final String MASTER = "master";
     public static final String MAX = "max";
@@ -274,6 +272,7 @@ public class ModelDescriptionConstants {
     public static final String OPERATION_HEADERS = "operation-headers";
     public static final String OPERATION_NAME = "operation-name";
     public static final String OPERATIONS = "operations";
+    public static final String OPERATOR = "operator";
     public static final String OUTBOUND_CONNECTION = "outbound-connection";
     /** Use this standard operation address field in the operation *description* ModelNode */
     public static final String OUTCOME = "outcome";
@@ -303,6 +302,7 @@ public class ModelDescriptionConstants {
     public static final String PROTOCOL = "protocol";
     public static final String PROVIDER = "provider";
     public static final String PROXIES = "proxies";
+    public static final String QUERY = "query";
     public static final String READ = "read";
     public static final String READ_ATTRIBUTE_OPERATION = "read-attribute";
     public static final String READ_CHILDREN_NAMES_OPERATION = "read-children-names";
@@ -393,12 +393,12 @@ public class ModelDescriptionConstants {
     public static final String SOURCE_NETWORK = "source-network";
     public static final String OPERATION_REQUIRES_RELOAD = "operation-requires-reload";
     public static final String OPERATION_REQUIRES_RESTART = "operation-requires-restart";
-    public static final String REDUCE = "reduce";
     public static final String RELOAD_SERVERS = "reload-servers";
     public static final String RESTART_SERVERS = "restart-servers";
     public static final String RESUME_SERVERS = "resume-servers";
     public static final String RESUME = "resume";
     public static final String SASL_PROTOCOL = "sasl-protocol";
+    public static final String SELECT = "select";
     public static final String SERVER_LOGGER = "server-logger";
     public static final String SERVER_NAME = "server-name";
     public static final String SHUTDOWN = "shutdown";
@@ -471,6 +471,7 @@ public class ModelDescriptionConstants {
     public static final String VAULT_EXPRESSION = "vault-expression";
     public static final String VAULT_OPTION = "vault-option";
     public static final String VAULT_OPTIONS = "vault-options";
+    public static final String WHERE = "where";
     public static final String WILDCARD = "wildcard";
     public static final String WRITE = "write";
     public static final String WRITE_ATTRIBUTE_OPERATION = "write-attribute";
