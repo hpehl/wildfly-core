@@ -156,6 +156,13 @@ public interface OperationContext extends ExpressionResolver {
     boolean hasResult();
 
     /**
+     * Removes the result if any exists
+     *
+     * @return {@code true} if {@link #getResult()} has been invoked
+     */
+    void clearResult();
+
+    /**
      * Attach a stream to be included as part of the response. The return value of this method should be
      * used as the value of the {@link #getResult() result} for the step that invokes this method. Callers
      * can then use that value to find the stream in the

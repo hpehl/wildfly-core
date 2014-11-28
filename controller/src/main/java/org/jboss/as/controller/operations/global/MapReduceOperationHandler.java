@@ -23,16 +23,19 @@
 package org.jboss.as.controller.operations.global;
 
 import org.jboss.as.controller.AttributeDefinition;
+import org.jboss.as.controller.MapAttributeDefinition;
 import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationDefinition;
 import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.OperationStepHandler;
 import org.jboss.as.controller.PathAddress;
 import org.jboss.as.controller.PrimitiveListAttributeDefinition;
+import org.jboss.as.controller.PropertiesAttributeDefinition;
 import org.jboss.as.controller.SimpleMapAttributeDefinition;
 import org.jboss.as.controller.SimpleOperationDefinitionBuilder;
 import org.jboss.as.controller.descriptions.ModelDescriptionConstants;
 import org.jboss.as.controller.descriptions.common.ControllerResolver;
+import org.jboss.as.controller.operations.validation.StringLengthValidator;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
@@ -51,11 +54,13 @@ public final class MapReduceOperationHandler extends GlobalOperationHandlers.Abs
 
     public static final MapReduceOperationHandler INSTANCE = new MapReduceOperationHandler();
 
-    private static final AttributeDefinition FILTER_ATT = new SimpleMapAttributeDefinition.Builder(ModelDescriptionConstants.FILTER, ModelType.STRING, true)
+    public static final PropertiesAttributeDefinition FILTER_ATT = new PropertiesAttributeDefinition.Builder(ModelDescriptionConstants.FILTER, true)
+            .setCorrector(MapAttributeDefinition.LIST_TO_MAP_CORRECTOR)
+            .setValidator(new StringLengthValidator(1, true, true))
             .build();
 
     private static final AttributeDefinition CONJUNCT_ATT = new SimpleMapAttributeDefinition.Builder(ModelDescriptionConstants.CONJUNCT, ModelType.BOOLEAN, true)
-                .build();
+            .build();
 
     private static final AttributeDefinition REDUCE_ATT = new PrimitiveListAttributeDefinition.Builder(ModelDescriptionConstants.REDUCE, ModelType.STRING)
             .setAllowNull(true)
@@ -108,17 +113,18 @@ public final class MapReduceOperationHandler extends GlobalOperationHandlers.Abs
         public void execute(OperationContext context, ModelNode operation) throws OperationFailedException {
 
             if(operation.hasDefined(FILTER)) {
-                boolean conjunct = operation.hasDefined(CONJUNCT) ? operation.get(CONJUNCT).asBoolean() : false;
+                boolean conjunct = operation.hasDefined(CONJUNCT) ? operation.get(CONJUNCT).asBoolean() : true;
                 boolean matches = matchesFilter(context.getResult(), operation.get(FILTER), conjunct);
                 // if the filter doesn't match we remove it from the response
                 if(!matches)
-                    context.getResult().set(ModelType.UNDEFINED);
+                    context.clearResult();
             }
 
             context.stepCompleted();
         }
 
         private static boolean matchesFilter(final ModelNode payload, final ModelNode filter, final boolean conjunct) throws OperationFailedException {
+            boolean isMatching = false;
             List<Property> filterProperties = filter.asPropertyList();
             List<Boolean> matches = new ArrayList<>(filterProperties.size());
 
@@ -132,30 +138,24 @@ public final class MapReduceOperationHandler extends GlobalOperationHandlers.Abs
                     if(payload.get(filterName).equals(filterValue)) {
                         matches.add(payload.get(filterName).equals(filterValue));
                     }
-                } else {
-                    // Unmatched filter attributes are treated according to the conjunct/disjunct semantics
-                    return conjunct ? false : true;
                 }
             }
 
             if (conjunct) {
                 // all matches must be true
-                for (boolean match : matches) {
-                    if (!match) {
-                        return false;
-                    }
-                }
-                return true;
+                isMatching = matches.size() == filterProperties.size();
 
             } else {
                 // at least one match must be true
                 for (Boolean match : matches) {
                     if (match) {
-                        return true;
+                        isMatching = true;
+                        break;
                     }
                 }
-                return false;
             }
+
+            return isMatching;
         }
 
       /*  private void reduce(final ModelNode result, final ModelNode attributes) throws OperationFailedException {
