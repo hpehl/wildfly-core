@@ -31,10 +31,11 @@ import org.jboss.as.controller.OperationStepHandler;
 import org.jboss.as.controller.PathAddress;
 import org.jboss.as.controller.PrimitiveListAttributeDefinition;
 import org.jboss.as.controller.PropertiesAttributeDefinition;
-import org.jboss.as.controller.SimpleMapAttributeDefinition;
+import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.SimpleOperationDefinitionBuilder;
 import org.jboss.as.controller.descriptions.ModelDescriptionConstants;
 import org.jboss.as.controller.descriptions.common.ControllerResolver;
+import org.jboss.as.controller.operations.validation.EnumValidator;
 import org.jboss.as.controller.operations.validation.StringLengthValidator;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.dmr.ModelNode;
@@ -50,39 +51,46 @@ import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.*;
  *
  * @author Heiko Braun (c) 2011 Red Hat Inc.
  */
-public final class MapReduceOperationHandler extends GlobalOperationHandlers.AbstractMultiTargetHandler {
+public final class QueryOperationHandler extends GlobalOperationHandlers.AbstractMultiTargetHandler {
 
-    public static final MapReduceOperationHandler INSTANCE = new MapReduceOperationHandler();
+    public static final QueryOperationHandler INSTANCE = new QueryOperationHandler();
 
-    public static final PropertiesAttributeDefinition FILTER_ATT = new PropertiesAttributeDefinition.Builder(ModelDescriptionConstants.FILTER, true)
+    public enum Operator {
+        AND, OR
+    }
+
+    public static final PropertiesAttributeDefinition WHERE_ATT = new PropertiesAttributeDefinition.Builder(ModelDescriptionConstants.WHERE, true)
             .setCorrector(MapAttributeDefinition.LIST_TO_MAP_CORRECTOR)
             .setValidator(new StringLengthValidator(1, true, true))
             .build();
 
-    private static final AttributeDefinition CONJUNCT_ATT = new SimpleMapAttributeDefinition.Builder(ModelDescriptionConstants.CONJUNCT, ModelType.BOOLEAN, true)
+    private static final AttributeDefinition OPERATOR_ATT = new SimpleAttributeDefinitionBuilder(ModelDescriptionConstants.OPERATOR, ModelType.STRING)
+            .setAllowNull(true)
+            .setDefaultValue(new ModelNode().set(Operator.AND.name()))
+            .setValidator(EnumValidator.create(Operator.class, true, false))
             .build();
 
-    private static final AttributeDefinition REDUCE_ATT = new PrimitiveListAttributeDefinition.Builder(ModelDescriptionConstants.REDUCE, ModelType.STRING)
+    private static final AttributeDefinition SELECT_ATT = new PrimitiveListAttributeDefinition.Builder(ModelDescriptionConstants.SELECT, ModelType.STRING)
             .setAllowNull(true)
             .build();
 
 
-    public static final OperationDefinition DEFINITION = new SimpleOperationDefinitionBuilder(ModelDescriptionConstants.MAP_REDUCE, ControllerResolver.getResolver("global"))
-            .addParameter(FILTER_ATT)
-            .addParameter(CONJUNCT_ATT)
-            .addParameter(REDUCE_ATT)
+    public static final OperationDefinition DEFINITION = new SimpleOperationDefinitionBuilder(ModelDescriptionConstants.QUERY, ControllerResolver.getResolver("global"))
+            .addParameter(SELECT_ATT)
+            .addParameter(WHERE_ATT)
+            //.addParameter(OPERATOR_ATT) // TODO for now it's implicitly Operator.AND
             .setReplyType(ModelType.OBJECT)
             .build();
 
-    private MapReduceOperationHandler() {
+    private QueryOperationHandler() {
 
     }
 
     @Override
     void doExecute(final OperationContext parentContext, ModelNode operation, FilteredData filteredData) throws OperationFailedException {
-        FILTER_ATT.validateOperation(operation);
-        CONJUNCT_ATT.validateOperation(operation);
-        REDUCE_ATT.validateOperation(operation);
+        WHERE_ATT.validateOperation(operation);
+        OPERATOR_ATT.validateOperation(operation);
+        SELECT_ATT.validateOperation(operation);
 
         ManagementResourceRegistration mrr = parentContext.getResourceRegistrationForUpdate();
         final OperationStepHandler readResourceHandler = mrr.getOperationHandler(
@@ -112,18 +120,24 @@ public final class MapReduceOperationHandler extends GlobalOperationHandlers.Abs
         @Override
         public void execute(OperationContext context, ModelNode operation) throws OperationFailedException {
 
-            if(operation.hasDefined(FILTER)) {
-                boolean conjunct = operation.hasDefined(CONJUNCT) ? operation.get(CONJUNCT).asBoolean() : true;
-                boolean matches = matchesFilter(context.getResult(), operation.get(FILTER), conjunct);
+            if(operation.hasDefined(WHERE)) {
+                Operator operator = operation.hasDefined(OPERATOR) ? Operator.valueOf(operation.get(OPERATOR).asString()) : Operator.AND;
+                boolean matches = matchesFilter(context.getResult(), operation.get(WHERE), operator);
                 // if the filter doesn't match we remove it from the response
                 if(!matches)
                     context.clearResult();
             }
 
+            if( context.hasResult() // might be filtered already
+                    && operation.hasDefined(SELECT) ){
+                ModelNode reduced = reduce(context.getResult(), operation.get(SELECT));
+                context.getResult().set(reduced);
+            }
+
             context.stepCompleted();
         }
 
-        private static boolean matchesFilter(final ModelNode payload, final ModelNode filter, final boolean conjunct) throws OperationFailedException {
+        private static boolean matchesFilter(final ModelNode payload, final ModelNode filter, final Operator operator) throws OperationFailedException {
             boolean isMatching = false;
             List<Property> filterProperties = filter.asPropertyList();
             List<Boolean> matches = new ArrayList<>(filterProperties.size());
@@ -134,18 +148,35 @@ public final class MapReduceOperationHandler extends GlobalOperationHandlers.Abs
 
                 if (payload.get(filterName).isDefined()) {
 
-                    // attribute is defined on this resource, evaluate filter ...
-                    if(payload.get(filterName).equals(filterValue)) {
+                    boolean isEqual = false;
+                    switch(payload.get(filterName).getType()) {
+                        case BOOLEAN:
+                            isEqual = filterValue.asBoolean() == payload.get(filterName).asBoolean();
+                            break;
+                        case LONG:
+                            isEqual = filterValue.asLong() == payload.get(filterName).asLong();
+                            break;
+                        case INT:
+                            isEqual = filterValue.asInt() == payload.get(filterName).asInt();
+                            break;
+                        case DOUBLE:
+                            isEqual = filterValue.asDouble() == payload.get(filterName).asDouble();
+                            break;
+                        default:
+                            isEqual = filterValue.equals(payload.get(filterName));
+                    }
+
+                    if(isEqual) {
                         matches.add(payload.get(filterName).equals(filterValue));
                     }
                 }
             }
 
-            if (conjunct) {
+            if (Operator.AND.equals(operator)) {
                 // all matches must be true
                 isMatching = matches.size() == filterProperties.size();
 
-            } else {
+            } else if(Operator.OR.equals(operator)){
                 // at least one match must be true
                 for (Boolean match : matches) {
                     if (match) {
@@ -154,34 +185,27 @@ public final class MapReduceOperationHandler extends GlobalOperationHandlers.Abs
                     }
                 }
             }
+            else {
+                throw new OperationFailedException("Invalid operator"+operator);
+            }
+
 
             return isMatching;
         }
 
-      /*  private void reduce(final ModelNode result, final ModelNode attributes) throws OperationFailedException {
-            // make sure all attributes are defined
-            List<String> names = new ArrayList<>();
-            List<String> undefined = new ArrayList<>();
+        private ModelNode reduce(final ModelNode payload, final ModelNode attributes) throws OperationFailedException {
+
+            ModelNode outcome = new ModelNode();
+
             for (ModelNode attribute : attributes.asList()) {
                 String name = attribute.asString();
-                ModelNode value = result.get(name);
+                ModelNode value = payload.get(name);
                 if (value.isDefined()) {
-                    names.add(name);
-                } else {
-                    undefined.add("\"" + name + "\"");
+                    outcome.get(name).set(value);
                 }
             }
 
-            if (!undefined.isEmpty()) {
-                throw  new OperationFailedException("Attributes " + names + " not defined on this resource");
-
-            } else {
-                ModelNode reduced = new ModelNode();
-                for (String name : names) {
-                    ModelNode value = result.get(name);
-                    reduced.get(name).set(value);
-                }
-            }
-        }*/
+            return outcome;
+        }
     }
 }

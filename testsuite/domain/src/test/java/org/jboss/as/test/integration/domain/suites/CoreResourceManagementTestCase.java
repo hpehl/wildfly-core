@@ -824,11 +824,11 @@ public class CoreResourceManagementTestCase {
         final DomainClient masterClient = domainMasterLifecycleUtil.getDomainClient();
 
         final ModelNode operation = new ModelNode();
-        operation.get(OP).set(MAP_REDUCE);
+        operation.get(OP).set(QUERY);
         operation.get(ADDRESS).setEmptyList();
         operation.get(ADDRESS_TEMPLATE).set("/host=master/server=*");
         operation.get(FILTER).add("foo", "bar");
-        operation.get(REDUCE).add("name");
+        operation.get(SELECT).add("name");
 
         ModelNode response = masterClient.execute(operation);
         System.out.println(response);
