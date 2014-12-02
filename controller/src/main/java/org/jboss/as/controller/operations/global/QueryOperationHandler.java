@@ -78,7 +78,7 @@ public final class QueryOperationHandler extends GlobalOperationHandlers.Abstrac
     public static final OperationDefinition DEFINITION = new SimpleOperationDefinitionBuilder(ModelDescriptionConstants.QUERY, ControllerResolver.getResolver("global"))
             .addParameter(SELECT_ATT)
             .addParameter(WHERE_ATT)
-            //.addParameter(OPERATOR_ATT) // TODO for now it's implicitly Operator.AND
+                    //.addParameter(OPERATOR_ATT) // TODO for now it's implicitly Operator.AND
             .setReplyType(ModelType.OBJECT)
             .build();
 
@@ -121,22 +121,25 @@ public final class QueryOperationHandler extends GlobalOperationHandlers.Abstrac
     static class FilterReduceHandler implements OperationStepHandler {
 
         static final FilterReduceHandler INSTANCE = new FilterReduceHandler();
+        private static final String UNDEFINED = "undefined";
 
         @Override
         public void execute(OperationContext context, ModelNode operation) throws OperationFailedException {
 
             if(operation.hasDefined(WHERE)) {
+
                 Operator operator = operation.hasDefined(OPERATOR) ? Operator.valueOf(operation.get(OPERATOR).asString()) : Operator.AND;
                 boolean matches = matchesFilter(context.getResult(), operation.get(WHERE), operator);
                 // if the filter doesn't match we remove it from the response
                 if(!matches)
                     context.getResult().set(new ModelNode());
+
             }
 
             if( operation.hasDefined(SELECT)
                     && context.hasResult()
                     && context.getResult().isDefined() // exclude empty model nodes
-                     ){
+                    ){
                 ModelNode reduced = reduce(context.getResult(), operation.get(SELECT));
                 context.getResult().set(reduced);
             }
@@ -144,39 +147,53 @@ public final class QueryOperationHandler extends GlobalOperationHandlers.Abstrac
             context.stepCompleted();
         }
 
-        private static boolean matchesFilter(final ModelNode payload, final ModelNode filter, final Operator operator) throws OperationFailedException {
+        private static boolean matchesFilter(final ModelNode resource, final ModelNode filter, final Operator operator) throws OperationFailedException {
             boolean isMatching = false;
             List<Property> filterProperties = filter.asPropertyList();
             List<Boolean> matches = new ArrayList<>(filterProperties.size());
 
             for (Property property : filterProperties) {
-                String filterName = property.getName();
-                ModelNode filterValue = property.getValue();
 
-                if (payload.get(filterName).isDefined()) {
+                final String filterName = property.getName();
+                final ModelNode filterValue = property.getValue();
 
-                    boolean isEqual = false;
-                    switch(payload.get(filterName).getType()) {
-                        case BOOLEAN:
-                            isEqual = filterValue.asBoolean() == payload.get(filterName).asBoolean();
-                            break;
-                        case LONG:
-                            isEqual = filterValue.asLong() == payload.get(filterName).asLong();
-                            break;
-                        case INT:
-                            isEqual = filterValue.asInt() == payload.get(filterName).asInt();
-                            break;
-                        case DOUBLE:
-                            isEqual = filterValue.asDouble() == payload.get(filterName).asDouble();
-                            break;
-                        default:
-                            isEqual = filterValue.equals(payload.get(filterName));
+                boolean isEqual = false;
+
+                if(!filterValue.isDefined() || filterValue.asString().equals(UNDEFINED))  {
+                    // query for undefined attributes
+                    isEqual = !resource.get(filterName).isDefined();
+                }  else {
+
+                    final ModelType targetValueType = resource.get(filterName).getType();
+
+                    try {
+                        // query for attribute values (throws exception when types don't match)
+                        switch (targetValueType) {
+                            case BOOLEAN:
+                                isEqual = filterValue.asBoolean() == resource.get(filterName).asBoolean();
+                                break;
+                            case LONG:
+                                isEqual = filterValue.asLong() == resource.get(filterName).asLong();
+                                break;
+                            case INT:
+                                isEqual = filterValue.asInt() == resource.get(filterName).asInt();
+                                break;
+                            case DOUBLE:
+                                isEqual = filterValue.asDouble() == resource.get(filterName).asDouble();
+                                break;
+                            default:
+                                isEqual = filterValue.equals(resource.get(filterName));
+                        }
+                    } catch (IllegalArgumentException e) {
+                        throw new OperationFailedException("Illegal argument for attribute '"+filterName+"'. Expected type "+targetValueType);
                     }
 
-                    if(isEqual) {
-                        matches.add(payload.get(filterName).equals(filterValue));
-                    }
                 }
+
+                if(isEqual) {
+                    matches.add(resource.get(filterName).equals(filterValue));
+                }
+
             }
 
             if (Operator.AND.equals(operator)) {
