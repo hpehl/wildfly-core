@@ -290,11 +290,6 @@ public abstract class AbstractOperationTestCase {
         }
 
         @Override
-        public void clearResult() {
-            // no-op
-        }
-
-        @Override
         public String attachResultStream(String mimeType, InputStream stream) {
             return "0";
         }

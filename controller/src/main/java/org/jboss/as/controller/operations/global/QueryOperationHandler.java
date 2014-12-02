@@ -83,7 +83,12 @@ public final class QueryOperationHandler extends GlobalOperationHandlers.Abstrac
             .build();
 
     private QueryOperationHandler() {
-
+        super(null, new GlobalOperationHandlers.FilterPredicate() {
+            @Override
+            public boolean appliesTo(ModelNode item) {
+                return !item.hasDefined(RESULT);
+            }
+        });
     }
 
     @Override
@@ -125,11 +130,13 @@ public final class QueryOperationHandler extends GlobalOperationHandlers.Abstrac
                 boolean matches = matchesFilter(context.getResult(), operation.get(WHERE), operator);
                 // if the filter doesn't match we remove it from the response
                 if(!matches)
-                    context.clearResult();
+                    context.getResult().set(new ModelNode());
             }
 
-            if( context.hasResult() // might be filtered already
-                    && operation.hasDefined(SELECT) ){
+            if( operation.hasDefined(SELECT)
+                    && context.hasResult()
+                    && context.getResult().isDefined() // exclude empty model nodes
+                     ){
                 ModelNode reduced = reduce(context.getResult(), operation.get(SELECT));
                 context.getResult().set(reduced);
             }
