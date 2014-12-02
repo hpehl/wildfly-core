@@ -170,11 +170,6 @@ public class AuthorizedAddressTest {
         }
 
         @Override
-        public void clearResult() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
-        @Override
         public String attachResultStream(String mimeType, InputStream stream) {
             throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         }

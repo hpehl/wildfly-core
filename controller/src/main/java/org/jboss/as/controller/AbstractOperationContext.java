@@ -1009,13 +1009,6 @@ abstract class AbstractOperationContext implements OperationContext {
     }
 
     @Override
-    public void clearResult() {
-        if(hasResult()) {
-            activeStep.response.remove(RESULT);
-        }
-    }
-
-    @Override
     public String attachResultStream(String mimeType, InputStream stream) {
         String domainUUID = UUID.randomUUID().toString();
         attachResultStream(domainUUID, mimeType, stream);

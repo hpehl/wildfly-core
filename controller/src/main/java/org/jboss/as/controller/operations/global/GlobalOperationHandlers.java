@@ -162,20 +162,33 @@ public class GlobalOperationHandlers {
             FAKE_OPERATION = resolve;
         }
 
+        // prevents exposure of internal addresses
+        private static final FilterPredicate DEFAULT_PREDICATE = new FilterPredicate() {
+            @Override
+            public boolean appliesTo(ModelNode item) {
+                return item.isDefined() && item.hasDefined(OP_ADDR);
+            }
+        };
+
         private final FilteredData filteredData;
+        private final FilterPredicate predicate;
 
         protected AbstractMultiTargetHandler() {
-            this(null);
+            this(null, DEFAULT_PREDICATE);
         }
 
         protected AbstractMultiTargetHandler(FilteredData filteredData) {
+            this(filteredData, DEFAULT_PREDICATE);
+        }
+
+        protected AbstractMultiTargetHandler(FilteredData filteredData, FilterPredicate predicate) {
             this.filteredData = filteredData;
+            this.predicate = predicate;
         }
 
         protected FilteredData getFilteredData() {
             return filteredData;
         }
-
 
         @Override
         public void execute(final OperationContext context, final ModelNode operation) throws OperationFailedException {
@@ -188,13 +201,16 @@ public class GlobalOperationHandlers {
                 // The final result should be a list of executed operations
                 final ModelNode result = context.getResult().setEmptyList();
                 // Trick the context to give us the model-root
-                context.addStep(new ModelNode(), FAKE_OPERATION.clone(), new ModelAddressResolver(operation, result, localFilteredData,
-                        new OperationStepHandler() {
-                    @Override
-                    public void execute(final OperationContext context, final ModelNode operation) throws OperationFailedException {
-                        doExecute(context, operation, localFilteredData);
-                    }
-                }), OperationContext.Stage.MODEL, true);
+                context.addStep(new ModelNode(), FAKE_OPERATION.clone(),
+                        new ModelAddressResolver(operation, result, localFilteredData,
+                                new OperationStepHandler() {
+                                    @Override
+                                    public void execute(final OperationContext context, final ModelNode operation) throws OperationFailedException {
+                                        doExecute(context, operation, localFilteredData);
+                                    }
+                                }, predicate),
+                        OperationContext.Stage.MODEL, true
+                );
                 context.completeStep(new OperationContext.ResultHandler() {
                     @Override
                     public void handleResult(OperationContext.ResultAction resultAction, OperationContext context, ModelNode operation) {
@@ -221,21 +237,28 @@ public class GlobalOperationHandlers {
         abstract void doExecute(OperationContext context, ModelNode operation, FilteredData filteredData) throws OperationFailedException;
     }
 
+    interface FilterPredicate {
+        boolean appliesTo(ModelNode result);
+    }
+
     public static final class ModelAddressResolver implements OperationStepHandler {
 
         private final ModelNode operation;
         private final ModelNode result;
         private final FilteredData filteredData;
+        private final FilterPredicate predicate;
         private final OperationStepHandler handler; // handler bypassing further wildcard resolution
 
         public ModelAddressResolver(final ModelNode operation, final ModelNode result,
-                                    final FilteredData filteredData,
-                                    final OperationStepHandler delegate) {
-            this.operation = operation;
-            this.result = result;
-            this.handler = delegate;
-            this.filteredData = filteredData;
-        }
+                                            final FilteredData filteredData,
+                                            final OperationStepHandler delegate,
+                                            final FilterPredicate predicate) {
+                    this.operation = operation;
+                    this.result = result;
+                    this.handler = delegate;
+                    this.predicate = predicate;
+                    this.filteredData = filteredData;
+                }
 
         /**
          * {@inheritDoc}
@@ -252,7 +275,7 @@ public class GlobalOperationHandlers {
                         boolean replace = false;
                         ModelNode replacement = new ModelNode().setEmptyList();
                         for (ModelNode item : result.asList()) {
-                            if (item.isDefined() && item.hasDefined(OP_ADDR)) {
+                            if (!predicate.appliesTo(item)) {
                                 replacement.add(item);
                             } else {
                                 replace = true;
