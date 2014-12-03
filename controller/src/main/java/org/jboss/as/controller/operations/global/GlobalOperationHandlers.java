@@ -21,9 +21,8 @@
  */
 package org.jboss.as.controller.operations.global;
 
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.ACCESS_CONTROL;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP;
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP_ADDR;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.*;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.FAILURE_DESCRIPTION;
 import static org.jboss.as.controller.operations.global.GlobalOperationAttributes.RECURSIVE;
 import static org.jboss.as.controller.operations.global.GlobalOperationAttributes.RECURSIVE_DEPTH;
 
@@ -136,9 +135,9 @@ public class GlobalOperationHandlers {
 
         if (processType != ProcessType.DOMAIN_SERVER) {
             root.registerOperationHandler(org.jboss.as.controller.operations.global.WriteAttributeHandler.DEFINITION,
-                                          org.jboss.as.controller.operations.global.WriteAttributeHandler.INSTANCE, true);
+                    org.jboss.as.controller.operations.global.WriteAttributeHandler.INSTANCE, true);
             root.registerOperationHandler(org.jboss.as.controller.operations.global.UndefineAttributeHandler.DEFINITION,
-                                          org.jboss.as.controller.operations.global.UndefineAttributeHandler.INSTANCE, true);
+                    org.jboss.as.controller.operations.global.UndefineAttributeHandler.INSTANCE, true);
         }
     }
 
@@ -220,6 +219,34 @@ public class GlobalOperationHandlers {
                         }
                     }
                 });
+
+                context.completeStep(new OperationContext.RollbackHandler() {
+                    @Override
+                    public void handleRollback(OperationContext context, ModelNode operation) {
+                        if (!context.hasFailureDescription()) {
+                            String op = operation.require(OP).asString();
+                            Map<PathAddress, ModelNode> failures = new HashMap<PathAddress, ModelNode>();
+                            for (ModelNode resultItem : result.asList()) {
+                                if (resultItem.hasDefined(FAILURE_DESCRIPTION)) {
+                                    final PathAddress failedAddress = PathAddress.pathAddress(resultItem.get(ADDRESS));
+                                    ModelNode failedDesc = resultItem.get(FAILURE_DESCRIPTION);
+                                    failures.put(failedAddress, failedDesc);
+                                }
+                            }
+
+                            if (failures.size() == 1) {
+                                Map.Entry<PathAddress, ModelNode> entry = failures.entrySet().iterator().next();
+                                if (entry.getValue().getType() == ModelType.STRING) {
+                                    context.getFailureDescription().set(ControllerLogger.ROOT_LOGGER.wildcardOperationFailedAtSingleAddress(op, entry.getKey(), entry.getValue().asString()));
+                                } else {
+                                    context.getFailureDescription().set(ControllerLogger.ROOT_LOGGER.wildcardOperationFailedAtSingleAddressWithComplexFailure(op, entry.getKey()));
+                                }
+                            } else if (failures.size() > 1) {
+                                context.getFailureDescription().set(ControllerLogger.ROOT_LOGGER.wildcardOperationFailedAtMultipleAddresses(op, failures.keySet()));
+                            }
+                        }
+                    }
+                });
             } else {
                 doExecute(context, operation, filteredData);
             }
@@ -250,15 +277,15 @@ public class GlobalOperationHandlers {
         private final OperationStepHandler handler; // handler bypassing further wildcard resolution
 
         public ModelAddressResolver(final ModelNode operation, final ModelNode result,
-                                            final FilteredData filteredData,
-                                            final OperationStepHandler delegate,
-                                            final FilterPredicate predicate) {
-                    this.operation = operation;
-                    this.result = result;
-                    this.handler = delegate;
-                    this.predicate = predicate;
-                    this.filteredData = filteredData;
-                }
+                                    final FilteredData filteredData,
+                                    final OperationStepHandler delegate,
+                                    final FilterPredicate predicate) {
+            this.operation = operation;
+            this.result = result;
+            this.handler = delegate;
+            this.predicate = predicate;
+            this.filteredData = filteredData;
+        }
 
         /**
          * {@inheritDoc}
@@ -480,7 +507,7 @@ public class GlobalOperationHandlers {
         // WFLY-3306 Ensure we have an entry for any valid child type
         for (String type : registry.getChildNames(PathAddress.EMPTY_ADDRESS)) {
             if ((validChildType == null || validChildType.equals(validChildType))
-                && !result.containsKey(type)) {
+                    && !result.containsKey(type)) {
                 result.put(type, Collections.<String>emptySet());
             }
         }
@@ -559,16 +586,16 @@ public class GlobalOperationHandlers {
         // Recursive value carries through unchanged
         nextOp.get(RECURSIVE.getName()).set(op.get(RECURSIVE.getName()));
         switch(recursiveDepthValue) {
-        case -1:
-            // Undefined stays undefined
-            nextOp.get(RECURSIVE_DEPTH.getName()).set(op.get(RECURSIVE_DEPTH.getName()));
-            break;
-        case 0:
-            nextOp.get(RECURSIVE_DEPTH.getName()).set(recursiveDepthValue);
-            break;
-        default:
-            nextOp.get(RECURSIVE_DEPTH.getName()).set(recursiveDepthValue - 1);
-            break;
+            case -1:
+                // Undefined stays undefined
+                nextOp.get(RECURSIVE_DEPTH.getName()).set(op.get(RECURSIVE_DEPTH.getName()));
+                break;
+            case 0:
+                nextOp.get(RECURSIVE_DEPTH.getName()).set(recursiveDepthValue);
+                break;
+            default:
+                nextOp.get(RECURSIVE_DEPTH.getName()).set(recursiveDepthValue - 1);
+                break;
         }
     }
 
