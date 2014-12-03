@@ -128,11 +128,16 @@ public final class QueryOperationHandler extends GlobalOperationHandlers.Abstrac
 
             if(operation.hasDefined(WHERE)) {
 
-                Operator operator = operation.hasDefined(OPERATOR) ? Operator.valueOf(operation.get(OPERATOR).asString()) : Operator.AND;
-                boolean matches = matchesFilter(context.getResult(), operation.get(WHERE), operator);
-                // if the filter doesn't match we remove it from the response
-                if(!matches)
-                    context.getResult().set(new ModelNode());
+                try {
+                    Operator operator = operation.hasDefined(OPERATOR) ? Operator.valueOf(operation.get(OPERATOR).asString()) : Operator.AND;
+                    boolean matches = matchesFilter(context.getResult(), operation.get(WHERE), operator);
+                    // if the filter doesn't match we remove it from the response
+                    if(!matches)
+                        context.getResult().set(new ModelNode());
+                } catch (OperationFailedException e) {
+                    context.getFailureDescription().set(e.getMessage());
+                    context.setRollbackOnly();
+                }
 
             }
 
