@@ -21,11 +21,6 @@
 */
 package org.jboss.as.domain.http.server;
 
-import java.io.File;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-
 import io.undertow.predicate.Predicates;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PredicateHandler;
@@ -38,9 +33,12 @@ import org.jboss.modules.ModuleLoadException;
 import org.jboss.modules.ModuleLoader;
 import org.wildfly.security.manager.WildFlySecurityManager;
 
-import static io.undertow.predicate.Predicates.not;
-import static io.undertow.predicate.Predicates.path;
-import static io.undertow.predicate.Predicates.suffixes;
+import java.io.File;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+
+import static io.undertow.predicate.Predicates.*;
 
 
 /**
@@ -84,7 +82,8 @@ public enum ConsoleMode {
     ADMIN_ONLY {
         @Override
         ResourceHandlerDefinition createConsoleHandler(String slot) throws ModuleLoadException {
-            return DisabledConsoleHandler.createNoConsoleForAdminMode(slot);
+            return ConsoleHandler.createConsoleHandler(slot);
+            // return DisabledConsoleHandler.createNoConsoleForAdminMode(slot);
         }
 
         @Override
